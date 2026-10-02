@@ -13,7 +13,7 @@ export interface Runtime {
 
 export interface Consumer {
   directory: string;
-  stickler: (argumentsList: string[], cwd?: string) => SpawnSyncReturns<string>;
+  seam: (argumentsList: string[], cwd?: string) => SpawnSyncReturns<string>;
   ordinaryLint: (argumentsList: string[], cwd?: string) => SpawnSyncReturns<string>;
   typecheck: (project: string) => SpawnSyncReturns<string>;
 }
@@ -55,7 +55,7 @@ const succeed = (command: string, argumentsList: string[], cwd: string) => {
 
 // The style switch must come from the runner alone, never from the test's own environment.
 const environmentWithoutStyle = () => {
-  const { STICKLER_STYLE: _styleSwitch, ...environment } = process.env;
+  const { SEAM_STYLE: _styleSwitch, ...environment } = process.env;
 
   return { ...environment, CI: '1' };
 };
@@ -89,7 +89,7 @@ const consumerFiles = (tarball: string) => ({
     name: 'consumer',
     private: true,
     type: 'module',
-    devDependencies: { '@sqve/stickler': `file:${tarball}`, 'vite-plus': '0.3.0' },
+    devDependencies: { '@sqve/seam': `file:${tarball}`, 'vite-plus': '0.3.0' },
   }),
   'tsconfig.json': JSON.stringify({
     compilerOptions: {
@@ -103,7 +103,7 @@ const consumerFiles = (tarball: string) => ({
     include: ['**/*.ts', '**/*.tsx'],
   }),
   'vite.config.ts': [
-    "import { format, lint } from '@sqve/stickler';",
+    "import { format, lint } from '@sqve/seam';",
     "import { defineConfig } from 'vite-plus';",
     '',
     'export default defineConfig({ lint, fmt: format });',
@@ -111,7 +111,7 @@ const consumerFiles = (tarball: string) => ({
   ].join('\n'),
   // A second project in the same install shows how presets compose with the base config.
   'presets/vite.config.ts': [
-    "import { lint, react, vitest } from '@sqve/stickler';",
+    "import { lint, react, vitest } from '@sqve/seam';",
     "import { defineConfig } from 'vite-plus';",
     '',
     'export default defineConfig({ lint: { extends: [lint, react, vitest] } });',
@@ -136,12 +136,12 @@ export const installConsumer = async (
 
   succeed(installer, installArguments, directory);
 
-  const cli = join(directory, 'node_modules/@sqve/stickler/dist/cli.js');
+  const cli = join(directory, 'node_modules/@sqve/seam/dist/cli.js');
   const vitePlus = join(directory, 'node_modules/vite-plus/dist/bin.js');
 
   return {
     directory,
-    stickler: (argumentsList, cwd = directory) =>
+    seam: (argumentsList, cwd = directory) =>
       run(runtime.executable, [cli, ...argumentsList], cwd, environmentWithoutStyle()),
     ordinaryLint: (argumentsList, cwd = directory) =>
       run(
@@ -162,7 +162,7 @@ const ancestorsOf = (path: string): string[] => {
 
 // Follows Node's lookup: the nearest `node_modules/vite-plus` at or above the package wins.
 export const vitePlusSeenByPackage = async (directory: string): Promise<string | undefined> => {
-  const packageDirectory = await realpath(join(directory, 'node_modules/@sqve/stickler'));
+  const packageDirectory = await realpath(join(directory, 'node_modules/@sqve/seam'));
 
   for (const ancestor of ancestorsOf(packageDirectory)) {
     const candidate = join(ancestor, 'node_modules/vite-plus');
