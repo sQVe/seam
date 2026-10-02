@@ -57,7 +57,9 @@ const succeed = (command: string, argumentsList: string[], cwd: string) => {
 const environmentWithoutStyle = () => {
   const { SEAM_STYLE: _styleSwitch, ...environment } = process.env;
 
-  return { ...environment, CI: '1' };
+  // Oxlint prints one line per diagnostic only when it detects an agent; otherwise the format
+  // depends on the shell that runs the tests.
+  return { ...environment, AI_AGENT: 'seam-tests', CI: '1' };
 };
 
 export const packPackage = async (destination: string): Promise<string> => {
