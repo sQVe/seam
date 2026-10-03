@@ -14,6 +14,15 @@ ruleTester.run('naming-convention', namingConventionRule, {
     'export const unusedParameter = (_event: unknown, value: string) => value;',
     'export const anonymousParameter = (_: unknown, value: string) => value;',
     "import { snake_case } from './external.js';\n\nexport const value = snake_case;",
+    "import { snake_case as snakeCase } from './external.js';\n\nexport const value = snakeCase;",
+    "import { snake_case as SnakeCase } from './external.js';\n\nexport const value = new SnakeCase();",
+    "import { snake_case as snake_case } from './external.js';\n\nexport const value = snake_case;",
+    "import { 'kebab-name' as kebabName } from './external.js';\n\nexport const value = kebabName;",
+    "import { type snake_case as SnakeCase } from './external.js';\n\nexport type Value = SnakeCase;",
+    "import defaultValue from './external.js';\n\nexport const value = defaultValue;",
+    "import DefaultClass from './external.js';\n\nexport const value = new DefaultClass();",
+    "import * as external from './external.js';\n\nexport const value = external;",
+    "import * as External from './external.js';\n\nexport const value = External;",
   ],
   invalid: [
     { code: 'export const MAX_RETRIES = 3;', errors: [camelCase('MAX_RETRIES')] },
@@ -38,6 +47,30 @@ ruleTester.run('naming-convention', namingConventionRule, {
     {
       code: 'export const { omitted: _bad_name, ...rest } = { omitted: 1, kept: 2 };',
       errors: [camelCase('_bad_name')],
+    },
+    {
+      code: "import { value as BAD_NAME } from './external.js';\n\nexport const used = BAD_NAME;",
+      errors: [camelCase('BAD_NAME')],
+    },
+    {
+      code: "import { value as bad_name } from './external.js';\n\nexport const used = bad_name;",
+      errors: [camelCase('bad_name')],
+    },
+    {
+      code: "import { 'kebab-name' as kebab_name } from './external.js';\n\nexport const used = kebab_name;",
+      errors: [camelCase('kebab_name')],
+    },
+    {
+      code: "import { type Value as BAD_TYPE } from './external.js';\n\nexport type Used = BAD_TYPE;",
+      errors: [camelCase('BAD_TYPE')],
+    },
+    {
+      code: "import DEFAULT_THING from './external.js';\n\nexport const used = DEFAULT_THING;",
+      errors: [camelCase('DEFAULT_THING')],
+    },
+    {
+      code: "import * as bad_namespace from './external.js';\n\nexport const used = bad_namespace;",
+      errors: [camelCase('bad_namespace')],
     },
   ],
 });
@@ -73,6 +106,8 @@ jsxRuleTester.run('naming-convention with JSX components', namingConventionRule,
     "import styled from 'styled-components';\n\nconst Box = styled.div;\nexport const Card = () => <Box />;",
     'let MutableEmpty = () => null;\nMutableEmpty = () => null;\nexport const Page = () => <MutableEmpty />;',
     'export function Row(Cell: () => null, plain: boolean) { if (plain) { Cell = () => null; } return <Cell />; }',
+    "import { view as View } from './view.js';\n\nexport const Page = () => <View />;",
+    "import View from './view.js';\n\nexport const Page = () => <View />;",
   ],
   invalid: [
     { code: 'export const MaxItems = 3;', errors: [camelCase('MaxItems')] },
@@ -163,6 +198,14 @@ jsxRuleTester.run('naming-convention with JSX components', namingConventionRule,
     {
       code: 'export function DestructuredView({ title: Title }: { title: string }) { return <box>{Title}</box>; }',
       errors: [camelCase('Title')],
+    },
+    {
+      code: "import { View as Main_View } from './view.js';\n\nexport const Page = () => <Main_View />;",
+      errors: [pascalCase('Main_View')],
+    },
+    {
+      code: "import MAIN_VIEW from './view.js';\n\nexport const Page = () => <MAIN_VIEW />;",
+      errors: [pascalCase('MAIN_VIEW')],
     },
   ],
 });
