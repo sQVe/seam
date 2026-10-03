@@ -76,10 +76,14 @@ const importSpecifierTypes = new Set<string>([
 const isImportSpecifier = (node: ESTree.Node): node is ESTree.ImportDeclarationSpecifier =>
   importSpecifierTypes.has(node.type);
 
-// `import { name }` keeps the exporter's name; a rename, a default, or a namespace import is the
-// file's choice.
+// `import { name }` keeps the exporter's name; a rename, a default, a namespace import, or an
+// `import name =` is the file's choice.
 const isChosenImportName = (definition: Definition): boolean => {
   const specifier = definition.node;
+
+  if (specifier.type === 'TSImportEqualsDeclaration') {
+    return true;
+  }
 
   if (!isImportSpecifier(specifier)) {
     return false;

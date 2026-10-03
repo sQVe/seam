@@ -23,6 +23,9 @@ ruleTester.run('naming-convention', namingConventionRule, {
     "import DefaultClass from './external.js';\n\nexport const value = new DefaultClass();",
     "import * as external from './external.js';\n\nexport const value = external;",
     "import * as External from './external.js';\n\nexport const value = External;",
+    "import external = require('./external.js');\n\nexport const value = external;",
+    "import External = require('./external.js');\n\nexport const value = External;",
+    'namespace Outer { export const member = 1; }\nimport member = Outer.member;\n\nexport const value = member;',
   ],
   invalid: [
     { code: 'export const MAX_RETRIES = 3;', errors: [camelCase('MAX_RETRIES')] },
@@ -71,6 +74,14 @@ ruleTester.run('naming-convention', namingConventionRule, {
     {
       code: "import * as bad_namespace from './external.js';\n\nexport const used = bad_namespace;",
       errors: [camelCase('bad_namespace')],
+    },
+    {
+      code: "import bad_name = require('./external.js');\n\nexport const used = bad_name;",
+      errors: [camelCase('bad_name')],
+    },
+    {
+      code: 'namespace Outer { export const member = 1; }\nimport BAD_MEMBER = Outer.member;\n\nexport const used = BAD_MEMBER;',
+      errors: [camelCase('BAD_MEMBER')],
     },
   ],
 });
