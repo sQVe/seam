@@ -62,8 +62,8 @@ statements. Rules ported from [anti-slop](https://github.com/dmmulroy/anti-slop)
 parameters, accumulator copies in `reduce`, `Reflect.apply` and `Reflect.get`, type aliases that
 hide `unknown`, and widen-then-assert casts. Outside tests, a type assertion needs a `SAFETY:`
 comment, or a one-line disable comment for `typescript/no-unsafe-type-assertion` with a reason after
-`--`. They load only when `SEAM_STYLE=1`, which the `seam` command sets. Editors and plain `vp lint`
-show the ordinary rules only.
+`--` that covers the line where the assertion starts. They load only when `SEAM_STYLE=1`, which the
+`seam` command sets. Editors and plain `vp lint` show the ordinary rules only.
 
 ### Presets
 

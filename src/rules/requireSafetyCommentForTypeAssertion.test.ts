@@ -37,10 +37,6 @@ export const value = JSON.parse('1') as number;`,
 export const value = (JSON.parse('1') as number) + JSON.parse(
   '2',
 );`,
-      `// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The literal is a number.
-export const value = {
-  count: JSON.parse('1') as number,
-};`,
       `export const value = {
   count: (
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The literal is a number.
@@ -49,6 +45,13 @@ export const value = {
 };`,
     ],
     invalid: [
+      {
+        code: `// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- This covers the statement's first line.
+export const value = {
+  count: JSON.parse('1') as number,
+};`,
+        errors: [missing],
+      },
       {
         code: `export const value = {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- This covers the property line.

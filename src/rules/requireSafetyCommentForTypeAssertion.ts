@@ -4,18 +4,6 @@ import { hasDisableReason, lineDisableScope } from '../shared/comments.ts';
 
 type TypeAssertion = ESTree.TSAsExpression | ESTree.TSTypeAssertion;
 
-interface DisabledLines {
-  sameLine: Set<number>;
-  nextLine: Set<number>;
-}
-
-interface CommentAnchors {
-  // The assertion and its ancestors below the statement that owns it.
-  inner: ESTree.Node[];
-  // The owning statement, then the loop or export around it.
-  statements: ESTree.Node[];
-}
-
 // `SAFETY:` followed by text, not preceded by a letter, digit, or underscore.
 const safetyPattern = /(?:^|[^\p{L}\p{N}_])SAFETY\s*:\s*\S/u;
 
@@ -67,34 +55,36 @@ const exportOf = (owner: ESTree.Node): ESTree.Node | undefined => {
   return exportsOwner ? parent : undefined;
 };
 
-// A comment before any anchor explains the assertion.
-const commentAnchorsOf = (assertion: TypeAssertion): CommentAnchors => {
-  const inner: ESTree.Node[] = [];
+// Search from the assertion outward, stopping at the statement that owns it.
+const hasSafetyComment = (sourceCode: SourceCode, assertion: TypeAssertion): boolean => {
   let current: ESTree.Node = assertion;
 
-  while (!commentOwnerKinds.has(current.type)) {
-    inner.push(current);
+  while (!hasSafetyCommentBefore(sourceCode, current, assertion)) {
+    if (commentOwnerKinds.has(current.type)) {
+      const loop = loopHeadOf(current);
+
+      if (loop !== undefined) {
+        return hasSafetyCommentBefore(sourceCode, loop, assertion);
+      }
+
+      const exported = exportOf(current);
+
+      return exported !== undefined && hasSafetyCommentBefore(sourceCode, exported, assertion);
+    }
 
     if (current.parent.type === 'Program') {
-      return { inner, statements: [] };
+      return false;
     }
 
     current = current.parent;
   }
 
-  const statements: ESTree.Node[] = [current];
-  const outer = loopHeadOf(current) ?? exportOf(current);
-
-  if (outer !== undefined) {
-    statements.push(outer);
-  }
-
-  return { inner, statements };
+  return true;
 };
 
 // Lines where a one-line directive with a reason turns off the rule this comment replaces.
-const disabledLinesOf = (sourceCode: SourceCode): DisabledLines => {
-  const disabled: DisabledLines = { sameLine: new Set(), nextLine: new Set() };
+const disabledLinesOf = (sourceCode: SourceCode): Set<number> => {
+  const disabled = new Set<number>();
 
   for (const comment of sourceCode.getAllComments()) {
     const scope = lineDisableScope(comment, 'typescript/no-unsafe-type-assertion');
@@ -103,27 +93,10 @@ const disabledLinesOf = (sourceCode: SourceCode): DisabledLines => {
       continue;
     }
 
-    if (scope === 'line') {
-      disabled.sameLine.add(comment.loc.start.line);
-    } else {
-      disabled.nextLine.add(comment.loc.end.line + 1);
-    }
+    disabled.add(scope === 'line' ? comment.loc.start.line : comment.loc.end.line + 1);
   }
 
   return disabled;
-};
-
-const isDisabledWithReason = (
-  disabled: DisabledLines,
-  statements: ESTree.Node[],
-  assertion: TypeAssertion,
-): boolean => {
-  const coveredNodes = [assertion, ...statements];
-
-  return (
-    disabled.sameLine.has(assertion.loc.start.line) ||
-    coveredNodes.some((node) => disabled.nextLine.has(node.loc.start.line))
-  );
 };
 
 export const requireSafetyCommentForTypeAssertionRule: Rule = {
@@ -132,23 +105,20 @@ export const requireSafetyCommentForTypeAssertionRule: Rule = {
     schema: [],
     messages: {
       missingSafetyComment:
-        'This type assertion has no `SAFETY:` comment. State the checked invariant right before the assertion or its statement, or give a reason after " -- " in a disable comment for `typescript/no-unsafe-type-assertion`.',
+        'This type assertion has no `SAFETY:` comment. State the checked invariant right before the assertion or its statement, or disable `typescript/no-unsafe-type-assertion` with a reason after " -- " in an `oxlint-disable-next-line` comment on the line above the assertion or an `oxlint-disable-line` comment on its line.',
     },
   },
   create(context) {
-    let disabledLines: DisabledLines | undefined;
+    let disabledLines: Set<number> | undefined;
 
     const isJustified = (node: TypeAssertion): boolean => {
-      const { inner, statements } = commentAnchorsOf(node);
-      const anchors = [...inner, ...statements];
-
-      if (anchors.some((anchor) => hasSafetyCommentBefore(context.sourceCode, anchor, node))) {
+      if (hasSafetyComment(context.sourceCode, node)) {
         return true;
       }
 
       disabledLines ??= disabledLinesOf(context.sourceCode);
 
-      return isDisabledWithReason(disabledLines, statements, node);
+      return disabledLines.has(node.loc.start.line);
     };
 
     const checkAssertion = (node: TypeAssertion) => {
